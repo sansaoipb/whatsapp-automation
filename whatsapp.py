@@ -1,3 +1,4 @@
+import os
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -12,7 +13,7 @@ import constants as const
 
 def automate(driver, contact, message, files):
     search_contact(driver, contact)
-    send_msg(driver, message)
+    send_msg(driver, contact, message)
 
     filtered_files = fs.filter_files(contact, files)
 
@@ -32,14 +33,23 @@ def search_contact(driver, contact):
     search_field.send_keys(Keys.ENTER)
 
 
-def send_msg(driver, message):
-    msg_field = driver.find_element_by_xpath(
-        '//div[contains(@class,"copyable-area")]//div[contains(@class,"copyable-text selectable-text")]'
-    )
+def send_msg(driver, contact, message):
+    try:
+        msg_field = driver.find_element_by_xpath(
+            '//div[contains(@class,"copyable-area")]//div[contains(@class,"copyable-text selectable-text")]'
+        )
 
-    msg_field.click()
-    msg_field.send_keys(str(message))
-    msg_field.send_keys(Keys.ENTER)
+        msg_field.click()
+        msg_field.send_keys(str(message))
+        msg_field.send_keys(Keys.ENTER)
+    except:
+        url = f"https://web.whatsapp.com/send?phone={contact}&text={message}"
+        driver.get(url)
+        WebDriverWait(driver, 60).until(
+            EC.presence_of_element_located(
+                (By.XPATH, '//div[contains(@class,"copyable-text selectable-text")]')
+            )
+        ).click()
 
 
 def send_file(driver, file):
@@ -49,7 +59,7 @@ def send_file(driver, file):
     file_field = driver.find_element_by_css_selector("input[type='file']")
 
     file_name = file["name"]
-    full_path = f"{const.FILES_FOLDER}/{file_name}"
+    full_path = os.path.join(const.FILES_FOLDER, file_name)
 
     if not Path(full_path).is_file():
         return
